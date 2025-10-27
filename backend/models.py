@@ -5,6 +5,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.mysql import BIGINT
+from sqlalchemy import MetaData
 import enum
 
 Base = declarative_base()
@@ -29,19 +30,20 @@ class User(Base):
     __tablename__ = 'users'
     id_user = Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True, nullable=False)
     name = Column(String(100), nullable=False)
-    email = Column(String(100), unique=True, nullable=False, index=True)
+    email = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole), nullable=False, default=UserRole.CLIENT)
+    role = Column(Enum(UserRole), nullable=False, default=UserRole.CLIENT)    
     phone_number = Column(String(20), nullable=True)
     address = Column(String(200), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
+    last_login_at = Column(TIMESTAMP, nullable=True)
     
     subscriptions = relationship("Subscription", back_populates="user")
 
 class Campaign(Base):
     __tablename__ = 'campaigns'
     id_campaign = Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True, nullable=False)
-    id_subscription = Column(BIGINT(unsigned=True), ForeignKey("subscriptions.id_subscription"), nullable=False)
+    id_subscription = Column(BIGINT(unsigned=True), ForeignKey("subscriptions.id_subscription", name="fk_campaign_subscription", ondelete="CASCADE"), nullable=False)
     name = Column(String(100), nullable=False)
     status = Column(Enum(CampaignStatus), nullable=False, default=CampaignStatus.Pending)
     start_date = Column(Date, nullable=False)
@@ -55,9 +57,9 @@ class Campaign(Base):
 class Subscription(Base):
     __tablename__ = 'subscriptions'
     id_subscription = Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True, nullable=False)
-    id_user = Column(BIGINT(unsigned=True), ForeignKey("users.id_user"), nullable=False)
-    id_product = Column(BIGINT(unsigned=True), ForeignKey("products.id_product"), nullable=False)
-    status = Column(Enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.Active)
+    id_user = Column(BIGINT(unsigned=True), ForeignKey("users.id_user", name="fk_subscription_user", ondelete="CASCADE"), nullable=False)
+    id_product = Column(BIGINT(unsigned=True), ForeignKey("products.id_product", name="fk_subscription_products", ondelete="RESTRICT"), nullable=False)
+    status = Column(Enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.Active)    
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=True)
 
@@ -79,8 +81,8 @@ class Product(Base):
 
 class ProductComponent(Base):
     __tablename__ = 'products_components'
-    id_product = Column(BIGINT(unsigned=True), ForeignKey("products.id_product"), primary_key=True, nullable=False)
-    id_component = Column(BIGINT(unsigned=True), ForeignKey("components.id_component"), primary_key=True, nullable=False)
+    id_product = Column(BIGINT(unsigned=True), ForeignKey("products.id_product", name="fk_products_components_products", ondelete="CASCADE"), primary_key=True, nullable=False)
+    id_component = Column(BIGINT(unsigned=True), ForeignKey("components.id_component", name="fk_products_components_component", ondelete="CASCADE"), primary_key=True, nullable=False)
     quantity = Column(Integer, nullable=False)
 
     product = relationship("Product", back_populates="components_association")
