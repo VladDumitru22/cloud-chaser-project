@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import crud, models, schemas
 from database import engine, get_db
-from backend.restrictions import validate_password
+from restrictions import validate_password
 
 models.Base.metadata.create_all(bind=engine)
 

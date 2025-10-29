@@ -1,10 +1,11 @@
 from sqlalchemy.orm import Session
-import models, schemas
+import models, schemas, restrictions
 from passlib.context import CryptContext
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 def create_user(db: Session, user: schemas.UserCreate):
+    restrictions.validate_password(user.password)
     hashed_password = pwd_context.hash(user.password)
     db_user = models.User(
         name=user.name,
