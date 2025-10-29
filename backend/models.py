@@ -1,11 +1,10 @@
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Enum, TIMESTAMP, DECIMAL,
+    Column, Integer, String, Enum, TIMESTAMP, DECIMAL,
     Boolean, Date, ForeignKey, Text, CheckConstraint
 )
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.mysql import BIGINT
-from sqlalchemy import MetaData
 import enum
 
 Base = declarative_base()
