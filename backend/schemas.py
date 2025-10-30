@@ -21,3 +21,11 @@ class UserOut(BaseModel):
 
     class Config:
         from_atributes = True
+    
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    id_user: Optional[int] = None
+    role: Optional[str] = None

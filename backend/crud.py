@@ -23,3 +23,6 @@ def create_user(db: Session, user: schemas.UserCreate):
 def get_user_by_email(db: Session, email):
     normalized_email = email.lower()
     return db.query(models.User).filter(models.User.email == normalized_email).first()
+
+def get_user_by_id(db: Session, id):
+    return db.query(models.User).filter(models.User.id_user == id).first()
