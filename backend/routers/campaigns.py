@@ -17,7 +17,7 @@ def get_campaigns_for_current_user(db: Session = Depends(get_db), current_user=D
             CampaignOut(
                 name=c.name,
                 product=c.subscription.product.name,
-                status=c.stats,
+                status=c.status,
                 start_date=c.start_date,
                 end_date=c.end_date
             )
