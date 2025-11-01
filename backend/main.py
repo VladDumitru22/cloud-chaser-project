@@ -1,8 +1,8 @@
-from fastapi import FastAPI
+from backend.routers import auth_router, campaign_router
 from fastapi.middleware.cors import CORSMiddleware
 from backend.db.session import engine
-from backend.routers import auth_router
 from backend.db.base import Base
+from fastapi import FastAPI
 
 Base.metadata.create_all(bind=engine)
 
@@ -17,4 +17,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router, prefix="/auth")
+app.include_router(auth_router)
+app.include_router(campaign_router, prefix="/campaigns")
