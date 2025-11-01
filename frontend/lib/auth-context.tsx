@@ -18,7 +18,14 @@ export type User = {
 type AuthContextType = {
   user: User | null
   login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string, role?: UserRole) => Promise<void>
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    phoneNumber?: string,
+    address?: string,
+    role?: UserRole
+  ) => Promise<void>
   logout: () => void
   isLoading: boolean
 }
@@ -53,24 +60,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: formData,
       })
 
-      if (!res.ok) {
-        throw new Error("Invalid credentials")
-      }
+      if (!res.ok) throw new Error("Invalid credentials")
 
       const data = await res.json()
       const token = data.access_token
-
       localStorage.setItem("cloudchaser_token", token)
 
       const userRes = await fetch(`${API_URL}/users/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       })
 
-      if (!userRes.ok) {
-        throw new Error("Failed to fetch user data")
-      }
+      if (!userRes.ok) throw new Error("Failed to fetch user data")
 
       const userData: User = await userRes.json()
       setUser(userData)
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (userData.role === "OPERATIVE") router.push("/operator")
       else if (userData.role === "ADMIN") router.push("/admin")
-      else if (userData.role === "CLIENT") router.push("/client")
+      else router.push("/client")
     } finally {
       setIsLoading(false)
     }
@@ -88,6 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string,
     email: string,
     password: string,
+    phoneNumber?: string,
+    address?: string,
     role: UserRole = "CLIENT"
   ) => {
     setIsLoading(true)
@@ -95,7 +97,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${API_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          phone_number: phoneNumber,
+          address,
+        }),
       })
 
       if (!res.ok) {
@@ -125,8 +133,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider")
   return context
 }
