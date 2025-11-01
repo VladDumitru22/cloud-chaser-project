@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
-from datetime import timedelta
+from datetime import timedelta, timezone, datetime
 from backend.db.session import get_db
-from backend.core import ACCESS_TOKEN_EXPIRE_MINUTES, verify_password, create_access_token
+from backend.core import ACCESS_TOKEN_EXPIRE_MINUTES, verify_password, create_access_token, get_current_user
 from backend.functions import get_user_by_email, create_user
 from backend.schemas import Token, UserOut, UserCreate
 
@@ -39,6 +39,9 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
     
     token_data = {"id_user": user.id_user, "role": user.role.value}
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
