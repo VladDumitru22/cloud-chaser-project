@@ -3,13 +3,16 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 
-export type UserRole = "worker" | "admin" | "client"
+export type UserRole = "CLIENT" | "OPERATIVE" | "ADMIN"
 
 export type User = {
-  id: string
+  id_user: number
   name: string
   email: string
   role: UserRole
+  phone_number?: string | null
+  address?: string | null
+  created_at: string
 }
 
 type AuthContextType = {
@@ -22,11 +25,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const mockUsers: (User & { password: string })[] = [
-  { id: "1", name: "John Worker", email: "worker@cloudchaser.com", password: "worker123", role: "worker" },
-  { id: "2", name: "Jane Admin", email: "admin@cloudchaser.com", password: "admin123", role: "admin" },
-  { id: "3", name: "Bob Client", email: "client@cloudchaser.com", password: "client123", role: "client" },
-]
+const API_URL = "http://localhost:8000"
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -34,69 +33,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
+    const token = localStorage.getItem("cloudchaser_token")
     const storedUser = localStorage.getItem("cloudchaser_user")
-    if (storedUser) {
+    if (token && storedUser) {
       setUser(JSON.parse(storedUser))
     }
     setIsLoading(false)
   }, [])
 
   const login = async (email: string, password: string) => {
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setIsLoading(true)
+    try {
+      const formData = new URLSearchParams()
+      formData.append("username", email)
+      formData.append("password", password)
 
-    const foundUser = mockUsers.find((u) => u.email === email && u.password === password)
+      const res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        body: formData,
+      })
 
-    if (!foundUser) {
-      throw new Error("Invalid credentials")
-    }
+      if (!res.ok) {
+        throw new Error("Invalid credentials")
+      }
 
-    const { password: _, ...userWithoutPassword } = foundUser
-    setUser(userWithoutPassword)
-    localStorage.setItem("cloudchaser_user", JSON.stringify(userWithoutPassword))
+      const data = await res.json()
+      const token = data.access_token
 
-    if (foundUser.role === "worker") {
-      router.push("/dashboard")
-    } else if (foundUser.role === "admin") {
-      router.push("/admin")
-    } else if (foundUser.role === "client") {
-      router.push("/client")
+      localStorage.setItem("cloudchaser_token", token)
+
+      const userRes = await fetch(`${API_URL}/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!userRes.ok) {
+        throw new Error("Failed to fetch user data")
+      }
+
+      const userData: User = await userRes.json()
+      setUser(userData)
+      localStorage.setItem("cloudchaser_user", JSON.stringify(userData))
+
+      if (userData.role === "OPERATIVE") router.push("/dashboard")
+      else if (userData.role === "ADMIN") router.push("/admin")
+      else if (userData.role === "CLIENT") router.push("/client")
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const register = async (name: string, email: string, password: string, role: UserRole = "client") => {
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    role: UserRole = "CLIENT"
+  ) => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      })
 
-    if (mockUsers.find((u) => u.email === email)) {
-      throw new Error("User already exists")
-    }
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.detail || "Registration failed")
+      }
 
-    const newUser: User = {
-      id: (mockUsers.length + 1).toString(),
-      name,
-      email,
-      role,
-    }
-
-    mockUsers.push({ ...newUser, password })
-    setUser(newUser)
-    localStorage.setItem("cloudchaser_user", JSON.stringify(newUser))
-
-    if (role === "worker") {
-      router.push("/dashboard")
-    } else if (role === "admin") {
-      router.push("/admin")
-    } else if (role === "client") {
-      router.push("/client")
+      await login(email, password)
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const logout = () => {
     setUser(null)
+    localStorage.removeItem("cloudchaser_token")
     localStorage.removeItem("cloudchaser_user")
     router.push("/")
   }
 
-  return <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {
