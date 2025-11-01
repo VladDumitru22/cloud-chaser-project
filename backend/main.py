@@ -10,7 +10,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Cloud Chaser API")
 
-@app.post("/users/", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
+@app.post("/register", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def create_new_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
