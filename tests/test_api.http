@@ -1,9 +1,0 @@
-### Login user
-POST http://127.0.0.1:8000/login
-Content-Type: application/x-www-form-urlencoded
-
-username=Vlad@test.com&password=TesT123!
-
-### Get current user
-GET http://127.0.0.1:8000/users/me
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c2VyIjo0LCJyb2xlIjoiQ0xJRU5UIiwiZXhwIjoxNzYxNzg2OTIzfQ.A8gbMs6DoQrLZ28THFnwdKjDnPVmk5ThNpna_hlvFXc

@@ -1,5 +1,4 @@
-import pytest
-from backend.restrictions import has_min_length, has_digit, has_special_char, has_uppercase, validate_password
+from backend.utils import has_min_length, has_digit, has_special_char, has_uppercase, validate_password
 
 PWD = "tEst123!"
 

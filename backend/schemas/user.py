@@ -1,7 +1,7 @@
+from backend.db.models import UserRole
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from models import UserRole
-from datetime import datetime
+from datetime import datetime 
 
 class UserCreate(BaseModel):
     name: str
@@ -21,11 +21,3 @@ class UserOut(BaseModel):
 
     class Config:
         from_atributes = True
-    
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    id_user: Optional[int] = None
-    role: Optional[str] = None
