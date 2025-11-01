@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData)
       localStorage.setItem("cloudchaser_user", JSON.stringify(userData))
 
-      if (userData.role === "OPERATIVE") router.push("/dashboard")
+      if (userData.role === "OPERATIVE") router.push("/operator")
       else if (userData.role === "ADMIN") router.push("/admin")
       else if (userData.role === "CLIENT") router.push("/client")
     } finally {

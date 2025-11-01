@@ -13,11 +13,11 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      if (user.role === "worker") {
-        router.push("/dashboard")
-      } else if (user.role === "admin") {
+      if (user.role === "OPERATIVE") {
+        router.push("/operator")
+      } else if (user.role === "ADMIN") {
         router.push("/admin")
-      } else if (user.role === "client") {
+      } else if (user.role === "CLIENT") {
         router.push("/client")
       }
     }
