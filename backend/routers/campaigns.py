@@ -4,7 +4,6 @@ from backend.db.session import get_db
 from backend.core import get_current_user
 from backend.functions import get_user_campaigns
 from backend.schemas import CampaignOut
-from backend.utils import format_date
 
 router = APIRouter(tags=["campaigns"])
 
@@ -19,8 +18,8 @@ def get_campaigns_for_current_user(db: Session = Depends(get_db), current_user=D
                 name=c.name,
                 product=c.subscription.product.name,
                 status=c.stats,
-                start_date=format_date(c.start_date),
-                end_date=format_date(c.end_date)
+                start_date=c.start_date,
+                end_date=c.end_date
             )
         )
     return result
