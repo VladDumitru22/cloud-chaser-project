@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import crud, models, schemas, auth
@@ -9,6 +10,15 @@ from datetime import timedelta
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Cloud Chaser API")
+
+origins = ["http://localhost:3000"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/register", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def create_new_user(user: schemas.UserCreate, db: Session = Depends(get_db)):

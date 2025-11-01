@@ -97,7 +97,7 @@ function ClientContent() {
 
 export default function ClientPage() {
   return (
-    <ProtectedRoute allowedRoles={["client"]}>
+    <ProtectedRoute allowedRoles={["CLIENT"]}>
       <ClientContent />
     </ProtectedRoute>
   )
