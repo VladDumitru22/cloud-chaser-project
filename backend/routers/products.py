@@ -18,4 +18,4 @@ def get_products_for_drop_down(db: Session = Depends(get_db)):
                 name=p.name
             )
         )
-    return products
+    return result
