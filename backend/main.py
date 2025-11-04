@@ -1,4 +1,9 @@
-from backend.routers import auth_router, campaign_router, user_router
+from backend.routers import (
+    auth_router, 
+    campaign_router, 
+    user_router,
+    product_router,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from backend.db.session import engine
 from backend.db.base import Base
@@ -20,3 +25,4 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(user_router, prefix="/users")
 app.include_router(campaign_router, prefix="/campaigns")
+app.include_router(product_router, prefix="/products")
