@@ -1,4 +1,4 @@
 from .user import UserCreate, UserOut
 from .auth import Token, TokenData
-from .campaigns import CampaignOut
+from .campaigns import CampaignOut, CampaignCreate
 from .products import ProductDropDown
