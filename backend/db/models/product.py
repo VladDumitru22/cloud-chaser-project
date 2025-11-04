@@ -13,4 +13,3 @@ class Product(Base):
 
     subscriptions = relationship("Subscription", back_populates="product")
     components_association = relationship("ProductComponent", back_populates="product") 
-    components = relationship("Component", secondary="products_components", back_populates="products")

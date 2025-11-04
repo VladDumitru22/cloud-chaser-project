@@ -14,4 +14,3 @@ class Component(Base):
     description = Column(String(255), nullable=True)
     
     products_association = relationship("ProductComponent", back_populates="component")
-    products = relationship("Product", secondary="products_components", back_populates="components")
