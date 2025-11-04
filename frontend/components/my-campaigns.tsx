@@ -104,7 +104,6 @@ export function MyCampaigns() {
             />
           </div>
 
-          {/* Dialog pentru adăugare campanie – rămâne local */}
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 shadow-md shadow-primary/20">
@@ -117,7 +116,7 @@ export function MyCampaigns() {
                 <DialogTitle>Create New Campaign</DialogTitle>
                 <DialogDescription>Set up a new marketing campaign for your business</DialogDescription>
               </DialogHeader>
-              {/* Form – rămâne local */}
+
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="product">Product</Label>

@@ -88,7 +88,6 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
-              {/* Name */}
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-foreground">Full Name</Label>
                 <div className="relative">
@@ -105,7 +104,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-foreground">Email</Label>
                 <div className="relative">
@@ -122,7 +120,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Phone */}
               <div className="space-y-2">
                 <Label htmlFor="phoneNumber" className="text-foreground">Phone Number</Label>
                 <div className="relative">
@@ -139,7 +136,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Address */}
               <div className="space-y-2">
                 <Label htmlFor="address" className="text-foreground">Address</Label>
                 <div className="relative">
@@ -156,7 +152,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Password */}
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-foreground">Password</Label>
                 <div className="relative">
@@ -185,7 +180,6 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {/* Confirm Password */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-foreground">Confirm Password</Label>
                 <div className="relative">
