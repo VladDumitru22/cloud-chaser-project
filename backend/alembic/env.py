@@ -6,11 +6,12 @@ from sqlalchemy import pool
 from alembic import context
 
 import os
-from models import Base
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
-
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from backend.db.base import Base
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
