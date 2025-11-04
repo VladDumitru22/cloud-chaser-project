@@ -3,6 +3,7 @@ from backend.routers import (
     campaign_router, 
     user_router,
     product_router,
+    subscription_router,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from backend.db.session import engine
@@ -26,3 +27,4 @@ app.include_router(auth_router)
 app.include_router(user_router, prefix="/users")
 app.include_router(campaign_router, prefix="/campaigns")
 app.include_router(product_router, prefix="/products")
+app.include_router(subscription_router, prefix="/subscriptions")

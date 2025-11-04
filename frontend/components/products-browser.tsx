@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Search, ShoppingCart, Check } from "lucide-react"
+import { Search, ShoppingCart, Check, Loader2, AlertCircle } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -15,63 +15,79 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-type Product = {
-  id: string
+// Tipurile se potrivesc cu Pydantic (Backend)
+type ComponentDetail = {
   name: string
-  description: string
-  price: number
-  duration: string
-  features: string[]
+  quantity: number
 }
 
-const availableProducts: Product[] = [
-  {
-    id: "1",
-    name: "Social Media Starter",
-    description: "Perfect for small businesses starting their social media journey",
-    price: 499,
-    duration: "3 months",
-    features: ["10 Posts per month", "2 Social platforms", "Basic analytics", "Email support"],
-  },
-  {
-    id: "2",
-    name: "Growth Package",
-    description: "Accelerate your brand presence with comprehensive social media management",
-    price: 999,
-    duration: "6 months",
-    features: [
-      "25 Posts per month",
-      "4 Social platforms",
-      "Advanced analytics",
-      "Priority support",
-      "Monthly strategy calls",
-    ],
-  },
-  {
-    id: "3",
-    name: "Enterprise Solution",
-    description: "Full-scale social media marketing for established brands",
-    price: 2499,
-    duration: "12 months",
-    features: [
-      "Unlimited posts",
-      "All platforms",
-      "Real-time analytics",
-      "24/7 dedicated support",
-      "Weekly strategy sessions",
-      "Custom campaigns",
-    ],
-  },
-]
+type Product = {
+  id_product: number
+  name: string
+  description: string
+  monthly_price: number
+  components: ComponentDetail[]
+}
+
+const API_URL = "http://localhost:8000"
 
 export function ProductsBrowser() {
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Stări pentru datele de la API
+  const [products, setProducts] = useState<Product[]>([])
+  const [ownedProductIds, setOwnedProductIds] = useState<number[]>([]) // Pentru butoanele dezactivate
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Stări pentru Dialog (pop-up)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [purchaseSuccess, setPurchaseSuccess] = useState(false)
 
-  const filteredProducts = availableProducts.filter(
+  const getToken = () => localStorage.getItem("cloudchaser_token")
+
+  // Încărcăm datele la pornire
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      const token = getToken()
+      if (!token) {
+        setError("User not authenticated.")
+        setIsLoading(false)
+        return
+      }
+
+      const headers = { Authorization: `Bearer ${token}` }
+
+      try {
+        // Rulăm ambele cereri în paralel
+        const [productsRes, ownedIdsRes] = await Promise.all([
+          fetch(`${API_URL}/products/list`, { headers }),
+          fetch(`${API_URL}/subscriptions/my-active-ids`, { headers }),
+        ])
+
+        if (!productsRes.ok) throw new Error("Failed to fetch products")
+        if (!ownedIdsRes.ok) throw new Error("Failed to fetch owned products")
+
+        const productsData: Product[] = await productsRes.json()
+        const ownedIdsData: number[] = await ownedIdsRes.json()
+
+        setProducts(productsData)
+        setOwnedProductIds(ownedIdsData)
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, []) // Se execută o singură dată
+
+  const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -81,16 +97,66 @@ export function ProductsBrowser() {
     setSelectedProduct(product)
     setIsPurchaseDialogOpen(true)
     setPurchaseSuccess(false)
+    setFormError(null)
   }
 
-  const confirmPurchase = () => {
-    // Simulate purchase
-    setPurchaseSuccess(true)
-    setTimeout(() => {
-      setIsPurchaseDialogOpen(false)
-      setPurchaseSuccess(false)
-      setSelectedProduct(null)
-    }, 2000)
+  // Logica de cumpărare reală
+  const confirmPurchase = async () => {
+    if (!selectedProduct) return
+
+    setIsSaving(true)
+    setFormError(null)
+    const token = getToken()
+
+      try {
+          const res = await fetch(`${API_URL}/subscriptions/`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ id_product: selectedProduct.id_product }),
+          })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.detail || "Purchase failed")
+      }
+
+      const newSubscription = await res.json()
+
+      // Actualizăm local lista de produse deținute
+      setOwnedProductIds((prev) => [...prev, newSubscription.id_product])
+
+      setPurchaseSuccess(true) // Afișăm succesul
+      setTimeout(() => {
+        // Închidem după 2 secunde
+        setIsPurchaseDialogOpen(false)
+        setSelectedProduct(null)
+      }, 2000)
+    } catch (err: any) {
+      setFormError(err.message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Stări de încărcare și eroare pentru întreaga pagină
+  if (isLoading) {
+    return (
+      <div className="flex h-60 w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center text-destructive">
+        <AlertCircle className="h-12 w-12 mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Failed to load products</h3>
+        <p className="text-sm">{error}</p>
+      </div>
+    )
   }
 
   return (
@@ -106,43 +172,67 @@ export function ProductsBrowser() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredProducts.map((product) => (
-          <Card key={product.id} className="flex flex-col border-border/50 shadow-lg shadow-primary/5">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-xl">{product.name}</CardTitle>
-                  <CardDescription className="mt-2">{product.description}</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-4">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">${product.price}</span>
-                <span className="text-sm text-muted-foreground">/ {product.duration}</span>
-              </div>
-              <div className="space-y-2">
-                {product.features.map((feature, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-primary" />
-                    <span className="text-muted-foreground">{feature}</span>
+        {filteredProducts.map((product) => {
+          // Verificăm dacă produsul este deținut
+          const isOwned = ownedProductIds.includes(product.id_product)
+
+          return (
+            <Card key={product.id_product} className="flex flex-col border-border/50 shadow-lg shadow-primary/5">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-xl">{product.name}</CardTitle>
+                    <CardDescription className="mt-2">{product.description}</CardDescription>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button
-                className="w-full gap-2 bg-gradient-to-r from-primary to-secondary shadow-md shadow-primary/20"
-                onClick={() => handlePurchase(product)}
-              >
-                <ShoppingCart className="h-4 w-4" />
-                Purchase Product
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 space-y-4">
+                <div className="flex items-baseline gap-2">
+                  {/* Folosim 'monthly_price' */}
+                  <span className="text-3xl font-bold text-foreground">${product.monthly_price}</span>
+                  {/* Text hardcodat */}
+                  <span className="text-sm text-muted-foreground">/ month</span>
+                </div>
+                <div className="space-y-2">
+                  {/* Folosim lista de componente */}
+                  {product.components.map((component, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground">
+                        {/* Afișăm cantitatea */}
+                        {component.quantity}x {component.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  className="w-full gap-2"
+                  variant={isOwned ? "outline" : "default"} // Stil diferit
+                  onClick={() => handlePurchase(product)}
+                  disabled={isOwned} // Dezactivat dacă e deținut
+                >
+                  {/* Text și iconiță dinamice */}
+                  {isOwned ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Already Subscribed
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-4 w-4" />
+                      Purchase Product
+                    </>
+                  )}
+                </Button>
+              </CardFooter>
+            </Card>
+          )
+        })}
       </div>
 
+      {/* Dialogul gestionează 'isSaving', 'formError' și 'purchaseSuccess' */}
       <Dialog open={isPurchaseDialogOpen} onOpenChange={setIsPurchaseDialogOpen}>
         <DialogContent>
           {!purchaseSuccess ? (
@@ -158,25 +248,42 @@ export function ProductsBrowser() {
                     <span className="font-medium">{selectedProduct?.name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Duration</span>
-                    <span className="font-medium">{selectedProduct?.duration}</span>
+                    <span className="text-sm text-muted-foreground">Billing</span>
+                    <span className="font-medium">Per Month</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Client</span>
                     <span className="font-medium">{user?.name}</span>
                   </div>
                   <div className="border-t border-border pt-2 mt-2 flex justify-between">
-                    <span className="font-semibold">Total</span>
-                    <span className="text-xl font-bold text-primary">${selectedProduct?.price}</span>
+                    <span className="font-semibold">Total (Monthly)</span>
+                    <span className="text-xl font-bold text-primary">
+                      ${selectedProduct?.monthly_price}
+                    </span>
                   </div>
                 </div>
+
+                {formError && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    <p>{formError}</p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsPurchaseDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsPurchaseDialogOpen(false)}
+                  disabled={isSaving}
+                >
                   Cancel
                 </Button>
-                <Button onClick={confirmPurchase} className="bg-gradient-to-r from-primary to-secondary">
-                  Confirm Purchase
+                <Button onClick={confirmPurchase} disabled={isSaving}>
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Confirm Purchase"
+                  )}
                 </Button>
               </DialogFooter>
             </>
@@ -188,7 +295,7 @@ export function ProductsBrowser() {
               <div>
                 <DialogTitle className="text-xl">Purchase Successful!</DialogTitle>
                 <DialogDescription className="mt-2">
-                  Your product has been purchased and will be activated shortly.
+                  Your new subscription is now active.
                 </DialogDescription>
               </div>
             </div>
