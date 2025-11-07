@@ -21,3 +21,18 @@ class UserOut(BaseModel):
 
     class Config:
         from_atributes = True
+
+class ClientCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    role: UserRole = UserRole.CLIENT 
+
+class ClientUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    role: Optional[UserRole] = None

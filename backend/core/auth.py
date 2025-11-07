@@ -50,5 +50,5 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 def admin_required(current_user = Depends(get_current_user)):
     if current_user.role != "ADMIN":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Operation not permitted. Admin access required.")
     return current_user
