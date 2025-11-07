@@ -96,9 +96,9 @@ export default function LoginPage() {
             </form>
             <div className="mt-4 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
               <p className="font-semibold mb-1">Demo Accounts:</p>
-              <p>Worker: worker@cloudchaser.com / worker123</p>
-              <p>Admin: admin@cloudchaser.com / admin123</p>
-              <p>Client: client@cloudchaser.com / client123</p>
+              <p>Operator: operator@cloudchaser.com / Operator123@</p>
+              <p>Admin: admin@cloudchaser.com / Admin123@</p>
+              <p>Client: test@cloudchaser.com / Test123@</p>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
