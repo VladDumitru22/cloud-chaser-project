@@ -97,7 +97,7 @@ function AdminContent() {
 
 export default function AdminPage() {
   return (
-    <ProtectedRoute allowedRoles={["admin"]}>
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
       <AdminContent />
     </ProtectedRoute>
   )
