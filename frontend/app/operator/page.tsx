@@ -120,7 +120,7 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <ProtectedRoute allowedRoles={["worker"]}>
+    <ProtectedRoute allowedRoles={["OPERATIVE"]}>
       <DashboardContent />
     </ProtectedRoute>
   )

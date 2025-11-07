@@ -15,7 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-// Tipurile se potrivesc cu Pydantic (Backend)
 type ComponentDetail = {
   name: string
   quantity: number
@@ -35,13 +34,11 @@ export function ProductsBrowser() {
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Stări pentru datele de la API
   const [products, setProducts] = useState<Product[]>([])
-  const [ownedProductIds, setOwnedProductIds] = useState<number[]>([]) // Pentru butoanele dezactivate
+  const [ownedProductIds, setOwnedProductIds] = useState<number[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Stări pentru Dialog (pop-up)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -50,7 +47,6 @@ export function ProductsBrowser() {
 
   const getToken = () => localStorage.getItem("cloudchaser_token")
 
-  // Încărcăm datele la pornire
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true)
@@ -64,7 +60,6 @@ export function ProductsBrowser() {
       const headers = { Authorization: `Bearer ${token}` }
 
       try {
-        // Rulăm ambele cereri în paralel
         const [productsRes, ownedIdsRes] = await Promise.all([
           fetch(`${API_URL}/products/list`, { headers }),
           fetch(`${API_URL}/subscriptions/my-active-ids`, { headers }),
@@ -85,7 +80,7 @@ export function ProductsBrowser() {
       }
     }
     loadData()
-  }, []) // Se execută o singură dată
+  }, [])
 
   const filteredProducts = products.filter(
     (product) =>
@@ -100,7 +95,6 @@ export function ProductsBrowser() {
     setFormError(null)
   }
 
-  // Logica de cumpărare reală
   const confirmPurchase = async () => {
     if (!selectedProduct) return
 
@@ -125,12 +119,10 @@ export function ProductsBrowser() {
 
       const newSubscription = await res.json()
 
-      // Actualizăm local lista de produse deținute
       setOwnedProductIds((prev) => [...prev, newSubscription.id_product])
 
-      setPurchaseSuccess(true) // Afișăm succesul
+      setPurchaseSuccess(true) 
       setTimeout(() => {
-        // Închidem după 2 secunde
         setIsPurchaseDialogOpen(false)
         setSelectedProduct(null)
       }, 2000)
@@ -141,7 +133,6 @@ export function ProductsBrowser() {
     }
   }
 
-  // Stări de încărcare și eroare pentru întreaga pagină
   if (isLoading) {
     return (
       <div className="flex h-60 w-full items-center justify-center">
@@ -173,7 +164,6 @@ export function ProductsBrowser() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredProducts.map((product) => {
-          // Verificăm dacă produsul este deținut
           const isOwned = ownedProductIds.includes(product.id_product)
 
           return (
@@ -188,18 +178,14 @@ export function ProductsBrowser() {
               </CardHeader>
               <CardContent className="flex-1 space-y-4">
                 <div className="flex items-baseline gap-2">
-                  {/* Folosim 'monthly_price' */}
                   <span className="text-3xl font-bold text-foreground">${product.monthly_price}</span>
-                  {/* Text hardcodat */}
                   <span className="text-sm text-muted-foreground">/ month</span>
                 </div>
                 <div className="space-y-2">
-                  {/* Folosim lista de componente */}
                   {product.components.map((component, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm">
                       <Check className="h-4 w-4 text-primary" />
                       <span className="text-muted-foreground">
-                        {/* Afișăm cantitatea */}
                         {component.quantity}x {component.name}
                       </span>
                     </div>
@@ -209,11 +195,10 @@ export function ProductsBrowser() {
               <CardFooter>
                 <Button
                   className="w-full gap-2"
-                  variant={isOwned ? "outline" : "default"} // Stil diferit
+                  variant={isOwned ? "outline" : "default"} 
                   onClick={() => handlePurchase(product)}
-                  disabled={isOwned} // Dezactivat dacă e deținut
+                  disabled={isOwned} 
                 >
-                  {/* Text și iconiță dinamice */}
                   {isOwned ? (
                     <>
                       <Check className="h-4 w-4" />
@@ -232,7 +217,6 @@ export function ProductsBrowser() {
         })}
       </div>
 
-      {/* Dialogul gestionează 'isSaving', 'formError' și 'purchaseSuccess' */}
       <Dialog open={isPurchaseDialogOpen} onOpenChange={setIsPurchaseDialogOpen}>
         <DialogContent>
           {!purchaseSuccess ? (

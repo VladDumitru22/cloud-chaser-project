@@ -20,16 +20,13 @@ import { Card } from "@/components/ui/card"
 import { Plus, Search, Calendar, Loader2, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-// Tipul pentru drop-down-ul de produse
 type Product = {
   id_product: number
   name: string
 }
 
-// Tipul pentru Status (se potrivește cu Enum-ul din Pydantic/SQL)
 type CampaignStatus = "Pending" | "Active" | "Completed" | "On Hold"
 
-// Tipul pentru Campanie (se potrivește cu schema Pydantic 'CampaignOut')
 type Campaign = {
   id_campaign: number
   name: string
@@ -42,36 +39,30 @@ type Campaign = {
 const API_URL = "http://localhost:8000"
 
 export function MyCampaigns() {
-  const { user } = useAuth() // Presupunem că nu e nevoie de 'user' direct, ci doar de token
+  const { user } = useAuth() 
 
-  // Stări pentru datele de la API
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [products, setProducts] = useState<Product[]>([])
 
-  // Stări pentru încărcarea paginii
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Stări pentru formularul de adăugare
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  // Stări pentru câmpurile formularului
   const [searchQuery, setSearchQuery] = useState("")
   const [formData, setFormData] = useState({
-    id_product: "", // Select-ul folosește string-uri
+    id_product: "", 
     name: "",
     start_date: "",
     end_date: "",
   })
 
-  // Funcție pentru a prelua token-ul (cea mai importantă parte)
   const getToken = () => {
     return localStorage.getItem("cloudchaser_token")
   }
 
-  // Încărcarea datelor la pornirea componentei
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true)
@@ -108,9 +99,8 @@ export function MyCampaigns() {
     }
 
     loadData()
-  }, []) // Se execută o singură dată
+  }, [])
 
-  // Funcția pentru a gestiona trimiterea formularului
   const handleAdd = async () => {
     setIsSaving(true)
     setFormError(null)
@@ -122,17 +112,15 @@ export function MyCampaigns() {
       return
     }
 
-    // Validare simplă
     if (!formData.id_product || !formData.name || !formData.start_date || !formData.end_date) {
       setFormError("Please fill out all fields.")
       setIsSaving(false)
       return
     }
 
-    // Pregătim payload-ul pentru schema 'CampaignCreate'
     const payload = {
       name: formData.name,
-      id_product: parseInt(formData.id_product), // Convertim în număr
+      id_product: parseInt(formData.id_product), 
       start_date: formData.start_date,
       end_date: formData.end_date,
     }
@@ -149,17 +137,13 @@ export function MyCampaigns() {
 
       if (!res.ok) {
         const errData = await res.json()
-        // Afișează eroarea specifică de la backend
         throw new Error(errData.detail || "Failed to create campaign")
       }
 
-      // Răspunsul este noua campanie (schema 'CampaignOut')
       const newCampaign: Campaign = await res.json()
 
-      // Adăugăm noua campanie la lista existentă
       setCampaigns((prevCampaigns) => [...prevCampaigns, newCampaign])
 
-      // Resetăm formularul și închidem dialogul
       setFormData({ id_product: "", name: "", start_date: "", end_date: "" })
       setIsAddDialogOpen(false)
     } catch (err: any) {
@@ -169,7 +153,6 @@ export function MyCampaigns() {
     }
   }
 
-  // --- Funcții ajutătoare pentru afișare ---
 
   const getStatusColor = (status: CampaignStatus) => {
     switch (status) {
@@ -198,7 +181,6 @@ export function MyCampaigns() {
     })
   }
 
-  // Resetăm eroarea formularului când dialogul se închide
   const handleDialogOpenChange = (open: boolean) => {
     setIsAddDialogOpen(open)
     if (!open) {
@@ -206,7 +188,6 @@ export function MyCampaigns() {
     }
   }
 
-  // --- Randare ---
 
   if (isLoading) {
     return (
@@ -310,7 +291,6 @@ export function MyCampaigns() {
                   />
                 </div>
 
-                {/* Afișarea erorii din formular */}
                 {formError && (
                   <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
