@@ -18,7 +18,7 @@ class Campaign(Base):
     id_campaign = Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True, nullable=False)
     id_subscription = Column(BIGINT(unsigned=True), ForeignKey("subscriptions.id_subscription", name="fk_campaign_subscription", ondelete="CASCADE"), nullable=False)
     name = Column(String(100), nullable=False)
-    status = Column(Enum(CampaignStatus), nullable=False, default=CampaignStatus.Pending)
+    status = Column(Enum(CampaignStatus, values_callable=lambda obj: [e.value for e in obj]), nullable=False, default=CampaignStatus.Pending)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
 
