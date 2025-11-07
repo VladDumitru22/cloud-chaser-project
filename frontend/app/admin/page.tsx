@@ -51,7 +51,7 @@ function AdminContent() {
                 )}
               >
                 <Users className="h-4 w-4" />
-                Clients
+                Users
               </button>
               <button
                 onClick={() => setActiveTab("campaigns")}
@@ -74,8 +74,8 @@ function AdminContent() {
         {activeTab === "clients" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground">Clients Management</h2>
-              <p className="mt-2 text-muted-foreground">Manage client information and contact details</p>
+              <h2 className="text-3xl font-bold tracking-tight text-foreground">Users Management</h2>
+              <p className="mt-2 text-muted-foreground">Manage user information and contact details</p>
             </div>
             <ClientsTable />
           </div>

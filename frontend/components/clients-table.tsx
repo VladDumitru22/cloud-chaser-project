@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react" // MODIFICAT
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,11 +16,10 @@ import {
 } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Card } from "@/components/ui/card"
-import { Plus, MoreVertical, Pencil, Trash2, Search, Loader2, AlertCircle } from "lucide-react" // MODIFICAT
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select" // MODIFICAT
+import { Plus, MoreVertical, Pencil, Trash2, Search, Loader2, AlertCircle } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// MODIFICAT: Tipul se potrivește cu 'ClientOut' din Pydantic
-type Client = {
+type User = {
   id_user: number
   name: string
   email: string
@@ -30,28 +29,22 @@ type Client = {
   role: "CLIENT" | "OPERATIVE" | "ADMIN"
 }
 
-// MODIFICAT: Am șters 'initialClients'
-
 const API_URL = "http://localhost:8000"
 
 export function ClientsTable() {
-  // MODIFICAT: Stări pentru date, încărcare și erori
-  const [clients, setClients] = useState<Client[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
   const [searchQuery, setSearchQuery] = useState("")
   
-  // Stări pentru dialoguri
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingClient, setEditingClient] = useState<Client | null>(null)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
 
-  // Stări pentru formulare
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: "", // MODIFICAT: Am adăugat parola
+    password: "",
     phone_number: "",
     address: "",
     role: "CLIENT",
@@ -61,9 +54,8 @@ export function ClientsTable() {
 
   const getToken = () => localStorage.getItem("cloudchaser_token")
 
-  // MODIFICAT: Funcție pentru a încărca datele
   useEffect(() => {
-    const loadClients = async () => {
+    const loadUsers = async () => {
       setIsLoading(true)
       setError(null)
       const token = getToken()
@@ -72,66 +64,57 @@ export function ClientsTable() {
         setIsLoading(false)
         return
       }
-
       try {
         const res = await fetch(`${API_URL}/admin/clients`, {
           headers: { Authorization: `Bearer ${token}` },
         })
-        if (!res.ok) throw new Error("Failed to fetch clients")
-
-        const data: Client[] = await res.json()
-        setClients(data)
+        if (!res.ok) throw new Error("Failed to fetch users")
+        const data: User[] = await res.json()
+        setUsers(data)
       } catch (err: any) {
         setError(err.message)
       } finally {
         setIsLoading(false)
       }
     }
-    loadClients()
+    loadUsers()
   }, [])
 
-  const filteredClients = clients.filter(
-    (client) =>
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.phone_number?.includes(searchQuery) ||
-      client.address?.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.phone_number?.includes(searchQuery) ||
+      user.address?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  // Funcție de resetare a formularului
   const resetForm = () => {
     setFormData({ name: "", email: "", password: "", phone_number: "", address: "", role: "CLIENT" })
     setFormError(null)
     setIsSaving(false)
   }
 
-  // MODIFICAT: handleAdd
   const handleAdd = async () => {
     setIsSaving(true)
     setFormError(null)
     const token = getToken()
-
-    // Validare parolă
     if (formData.password.length < 6) {
       setFormError("Password must be at least 6 characters long.")
       setIsSaving(false)
       return
     }
-
     try {
       const res = await fetch(`${API_URL}/admin/clients`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(formData),
       })
-
       if (!res.ok) {
         const errData = await res.json()
-        throw new Error(errData.detail || "Failed to add client")
+        throw new Error(errData.detail || "Failed to add user")
       }
-
-      const newClient: Client = await res.json()
-      setClients([...clients, newClient])
+      const newUser: User = await res.json()
+      setUsers([...users, newUser])
       resetForm()
       setIsAddDialogOpen(false)
     } catch (err: any) {
@@ -141,15 +124,11 @@ export function ClientsTable() {
     }
   }
 
-  // MODIFICAT: handleEdit
   const handleEdit = async () => {
-    if (!editingClient) return
-    
+    if (!editingUser) return
     setIsSaving(true)
     setFormError(null)
     const token = getToken()
-
-    // Trimitem doar datele modificate (fără parolă)
     const updatePayload = {
       name: formData.name,
       email: formData.email,
@@ -157,23 +136,20 @@ export function ClientsTable() {
       address: formData.address || null,
       role: formData.role,
     }
-
     try {
-      const res = await fetch(`${API_URL}/admin/clients/${editingClient.id_user}`, {
+      const res = await fetch(`${API_URL}/admin/clients/${editingUser.id_user}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(updatePayload),
       })
-
       if (!res.ok) {
         const errData = await res.json()
-        throw new Error(errData.detail || "Failed to update client")
+        throw new Error(errData.detail || "Failed to update user")
       }
-
-      const updatedClient: Client = await res.json()
-      setClients(clients.map((c) => (c.id_user === updatedClient.id_user ? updatedClient : c)))
+      const updatedUser: User = await res.json()
+      setUsers(users.map((c) => (c.id_user === updatedUser.id_user ? updatedUser : c)))
       resetForm()
-      setEditingClient(null)
+      setEditingUser(null)
       setIsEditDialogOpen(false)
     } catch (err: any) {
       setFormError(err.message)
@@ -182,11 +158,11 @@ export function ClientsTable() {
     }
   }
 
-  // MODIFICAT: handleDelete
   const handleDelete = async (id: number) => {
-    if (!confirm(`Are you sure you want to delete client ${id}?`)) return
-    
+    setIsSaving(true)
+    setError(null)
     const token = getToken()
+    
     try {
       const res = await fetch(`${API_URL}/admin/clients/${id}`, {
         method: "DELETE",
@@ -194,28 +170,27 @@ export function ClientsTable() {
       })
 
       if (!res.ok) {
-         const errData = await res.json()
-        throw new Error(errData.detail || "Failed to delete client")
+        const errData = await res.json()
+        throw new Error(errData.detail || "Failed to delete user")
       }
       
-      // La succes (status 204), actualizăm starea
-      setClients(clients.filter((c) => c.id_user !== id))
-
+      setUsers(users.filter((c) => c.id_user !== id))
     } catch (err: any) {
-      // Afișăm o eroare globală, deoarece dialogul este deja închis
       setError(err.message)
+    } finally {
+      setIsSaving(false)
     }
   }
 
-  const openEditDialog = (client: Client) => {
-    setEditingClient(client)
+  const openEditDialog = (user: User) => {
+    setEditingUser(user)
     setFormData({
-      name: client.name,
-      email: client.email,
-      phone_number: client.phone_number || "",
-      address: client.address || "",
-      role: client.role,
-      password: "", // Nu încărcăm parola
+      name: user.name,
+      email: user.email,
+      phone_number: user.phone_number || "",
+      address: user.address || "",
+      role: user.role,
+      password: "",
     })
     setFormError(null)
     setIsEditDialogOpen(true)
@@ -227,12 +202,12 @@ export function ClientsTable() {
     })
   }
   
-  // Stări de încărcare și eroare pentru întreaga pagină
   if (isLoading) {
     return <div className="flex h-60 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
   }
-  if (error) {
-    return <div className="text-destructive p-4 text-center">{error}</div>
+  
+  if (error && !isLoading) {
+    return <div className="text-destructive p-4 text-center rounded-lg border border-destructive/50 bg-destructive/10">{error}</div>
   }
 
   return (
@@ -242,7 +217,7 @@ export function ClientsTable() {
           <div className="relative flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search clients..."
+              placeholder="Search users..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -253,24 +228,23 @@ export function ClientsTable() {
             <DialogTrigger asChild>
               <Button className="gap-2 shadow-md shadow-primary/20">
                 <Plus className="h-4 w-4" />
-                Add Client
+                Add User
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Client</DialogTitle>
+               <DialogHeader>
+                <DialogTitle>Add New User</DialogTitle>
                 <DialogDescription>Create a new user entry in the system</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Name</Label>
-                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Client name" disabled={isSaving} />
+                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="User name" disabled={isSaving} />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="client@example.com" disabled={isSaving} />
+                  <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="user@example.com" disabled={isSaving} />
                 </div>
-                {/* MODIFICAT: Am adăugat câmpul Parolă */}
                 <div className="grid gap-2">
                   <Label htmlFor="password">Temporary Password</Label>
                   <Input id="password" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Min. 6 characters" disabled={isSaving} />
@@ -283,7 +257,6 @@ export function ClientsTable() {
                   <Label htmlFor="address">Address</Label>
                   <Input id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="123 Business St, City, State ZIP" disabled={isSaving} />
                 </div>
-                {/* MODIFICAT: Am adăugat selector de Rol */}
                 <div className="grid gap-2">
                   <Label htmlFor="role">Role</Label>
                   <Select value={formData.role} onValueChange={(value: "CLIENT" | "OPERATIVE") => setFormData({ ...formData, role: value })} disabled={isSaving}>
@@ -299,7 +272,7 @@ export function ClientsTable() {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSaving}>Cancel</Button>
                 <Button onClick={handleAdd} disabled={isSaving}>
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Client"}
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add User"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -308,41 +281,45 @@ export function ClientsTable() {
 
         <div className="rounded-lg border border-border/50">
           <Table>
-            <TableHeader>
+             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="font-semibold">ID</TableHead>
                 <TableHead className="font-semibold">Name</TableHead>
                 <TableHead className="font-semibold">Email</TableHead>
                 <TableHead className="font-semibold">Phone</TableHead>
-                <TableHead className="font-semibold">Role</TableHead> {/* MODIFICAT: Am adăugat Rol */}
+                <TableHead className="font-semibold">Role</TableHead>
                 <TableHead className="font-semibold">Created</TableHead>
                 <TableHead className="w-[70px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredClients.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No clients found</TableCell>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No users found</TableCell>
                 </TableRow>
               ) : (
-                filteredClients.map((client) => (
-                  <TableRow key={client.id_user}>
-                    <TableCell className="font-mono text-sm">{client.id_user}</TableCell>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{client.email}</TableCell>
-                    <TableCell className="text-muted-foreground">{client.phone_number || "N/A"}</TableCell>
-                    <TableCell><span className="rounded-full bg-secondary/20 px-2 py-1 text-xs font-medium text-secondary-foreground">{client.role}</span></TableCell> {/* MODIFICAT */}
-                    <TableCell className="text-muted-foreground">{formatDate(client.created_at)}</TableCell>
+                filteredUsers.map((user) => (
+                  <TableRow key={user.id_user}>
+                    <TableCell className="font-mono text-sm">{user.id_user}</TableCell>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                    <TableCell className="text-muted-foreground">{user.phone_number || "N/A"}</TableCell>
+                    <TableCell><span className="rounded-full bg-secondary/20 px-2 py-1 text-xs font-medium text-secondary-foreground">{user.role}</span></TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(user.created_at)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /><span className="sr-only">Open menu</span></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEditDialog(client)}>
+                          <DropdownMenuItem onClick={() => openEditDialog(user)}>
                             <Pencil className="mr-2 h-4 w-4" /> Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(client.id_user)} className="text-destructive focus:text-destructive">
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(user.id_user)}
+                            className="text-destructive focus:text-destructive"
+                            disabled={isSaving}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -358,9 +335,9 @@ export function ClientsTable() {
 
       <Dialog open={isEditDialogOpen} onOpenChange={(open) => { setIsEditDialogOpen(open); if (!open) resetForm(); }}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Client</DialogTitle>
-            <DialogDescription>Update the client details. Password is not changed here.</DialogDescription>
+           <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>Update the user details. Password is not changed here.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
