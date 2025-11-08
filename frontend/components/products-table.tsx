@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,132 +14,201 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Card } from "@/components/ui/card"
-import { Plus, MoreVertical, Pencil, Trash2, Search } from "lucide-react"
-
-type Client = {
-  id: string
-  name: string
-}
+import { Plus, MoreVertical, Pencil, Trash2, Search, Loader2 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 
 type Product = {
-  id: string
-  id_client: string
+  id_product: number
   name: string
-  start_date: string
-  end_date: string
+  description: string | null
+  monthly_price: string
+  is_active: boolean
 }
 
-const mockClients: Client[] = [
-  { id: "1", name: "Acme Corporation" },
-  { id: "2", name: "TechStart Inc" },
-  { id: "3", name: "Global Media Group" },
-  { id: "4", name: "Digital Solutions Ltd" },
-]
-
-const initialProducts: Product[] = [
-  {
-    id: "1",
-    id_client: "1",
-    name: "Summer Campaign 2024",
-    start_date: "2024-06-01",
-    end_date: "2024-08-31",
-  },
-  {
-    id: "2",
-    id_client: "2",
-    name: "Product Launch Strategy",
-    start_date: "2024-03-15",
-    end_date: "2024-06-15",
-  },
-  {
-    id: "3",
-    id_client: "3",
-    name: "Brand Awareness Initiative",
-    start_date: "2024-01-01",
-    end_date: "2024-12-31",
-  },
-]
+const API_URL = "http://localhost:8000"
 
 export function ProductsTable() {
-  const [products, setProducts] = useState<Product[]>(initialProducts)
+  const [products, setProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  
   const [formData, setFormData] = useState({
-    id_client: "",
     name: "",
-    start_date: "",
-    end_date: "",
+    description: "",
+    monthly_price: "",
+    is_active: "true",
   })
+  const [isSaving, setIsSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
-  const getClientName = (clientId: string) => {
-    return mockClients.find((c) => c.id === clientId)?.name || "Unknown Client"
-  }
+  const getToken = () => localStorage.getItem("cloudchaser_token")
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setIsLoading(true)
+      setError(null)
+      const token = getToken()
+      if (!token) {
+        setError("User not authenticated.")
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/products-management/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) {
+           const errData = await res.json()
+           throw new Error(errData.detail || "Failed to fetch products")
+        }
+        const data: Product[] = await res.json()
+        setProducts(data)
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadProducts()
+  }, [])
 
   const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      getClientName(product.id_client).toLowerCase().includes(searchQuery.toLowerCase()),
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const handleAdd = () => {
-    const newProduct: Product = {
-      id: (products.length + 1).toString(),
-      id_client: formData.id_client,
-      name: formData.name,
-      start_date: formData.start_date,
-      end_date: formData.end_date,
+  const resetForm = () => {
+    setFormData({ name: "", description: "", monthly_price: "", is_active: "true" })
+    setFormError(null)
+    setIsSaving(false)
+  }
+
+  const handleAdd = async () => {
+    setIsSaving(true)
+    setFormError(null)
+    const token = getToken()
+
+    try {
+      const payload = {
+        name: formData.name,
+        description: formData.description || null,
+        monthly_price: parseFloat(formData.monthly_price),
+        is_active: formData.is_active === "true",
+      }
+      
+      const res = await fetch(`${API_URL}/products-management/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.detail || "Failed to add product")
+      }
+
+      const newProduct: Product = await res.json()
+      setProducts([...products, newProduct])
+      resetForm()
+      setIsAddDialogOpen(false)
+    } catch (err: any) {
+      setFormError(err.message)
+    } finally {
+      setIsSaving(false)
     }
-    setProducts([...products, newProduct])
-    setFormData({ id_client: "", name: "", start_date: "", end_date: "" })
-    setIsAddDialogOpen(false)
   }
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editingProduct) return
-    setProducts(
-      products.map((p) =>
-        p.id === editingProduct.id
-          ? {
-              ...p,
-              id_client: formData.id_client,
-              name: formData.name,
-              start_date: formData.start_date,
-              end_date: formData.end_date,
-            }
-          : p,
-      ),
-    )
-    setFormData({ id_client: "", name: "", start_date: "", end_date: "" })
-    setEditingProduct(null)
-    setIsEditDialogOpen(false)
+    setIsSaving(true)
+    setFormError(null)
+    const token = getToken()
+
+    try {
+      const payload = {
+        name: formData.name,
+        description: formData.description || null,
+        monthly_price: parseFloat(formData.monthly_price),
+        is_active: formData.is_active === "true",
+      }
+      
+      const res = await fetch(`${API_URL}/products-management/${editingProduct.id_product}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.detail || "Failed to update product")
+      }
+
+      const updatedProduct: Product = await res.json()
+      setProducts(
+        products.map((p) => (p.id_product === updatedProduct.id_product ? updatedProduct : p)),
+      )
+      resetForm()
+      setEditingProduct(null)
+      setIsEditDialogOpen(false)
+    } catch (err: any) {
+      setFormError(err.message)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const handleDelete = (id: string) => {
-    setProducts(products.filter((p) => p.id !== id))
+  const handleDelete = async (id: number) => {
+    setIsSaving(true)
+    setError(null)
+    const token = getToken()
+
+    try {
+      const res = await fetch(`${API_URL}/products-management/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.detail || "Failed to delete product")
+      }
+      
+      setProducts(products.filter((p) => p.id_product !== id))
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const openEditDialog = (product: Product) => {
     setEditingProduct(product)
     setFormData({
-      id_client: product.id_client,
       name: product.name,
-      start_date: product.start_date,
-      end_date: product.end_date,
+      description: product.description || "",
+      monthly_price: product.monthly_price,
+      is_active: product.is_active.toString(),
     })
+    setFormError(null)
     setIsEditDialogOpen(true)
   }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
+  
+  if (isLoading) {
+    return <div className="flex h-60 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+  }
+  
+  if (error && !isLoading) {
+    return <div className="text-destructive p-4 text-center rounded-lg border border-destructive/50 bg-destructive/10">{error}</div>
   }
 
   return (
@@ -156,7 +225,7 @@ export function ProductsTable() {
             />
           </div>
 
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setIsAddDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="gap-2 shadow-md shadow-primary/20">
                 <Plus className="h-4 w-4" />
@@ -166,60 +235,42 @@ export function ProductsTable() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add New Product</DialogTitle>
-                <DialogDescription>Create a new product entry for a client</DialogDescription>
+                <DialogDescription>Create a new product offering</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="client">Client</Label>
-                  <Select
-                    value={formData.id_client}
-                    onValueChange={(value) => setFormData({ ...formData, id_client: value })}
-                  >
-                    <SelectTrigger id="client">
-                      <SelectValue placeholder="Select a client" />
+                  <Label htmlFor="name">Name</Label>
+                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Product name" disabled={isSaving} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Input id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Product description" disabled={isSaving} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="price">Monthly Price ($)</Label>
+                  <Input id="price" type="number" step="0.01" value={formData.monthly_price} onChange={(e) => setFormData({ ...formData, monthly_price: e.target.value })} placeholder="0.00" disabled={isSaving} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="is-active-add">Status</Label>
+                  <Select value={formData.is_active} onValueChange={(value) => setFormData({ ...formData, is_active: value })} disabled={isSaving}>
+                    <SelectTrigger id="is-active-add">
+                      <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockClients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Product Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Product name"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="start-date">Start Date</Label>
-                  <Input
-                    id="start-date"
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="end-date">End Date</Label>
-                  <Input
-                    id="end-date"
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                  />
-                </div>
+                {formError && <p className="text-sm text-destructive">{formError}</p>}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSaving}>
                   Cancel
                 </Button>
-                <Button onClick={handleAdd}>Add Product</Button>
+                <Button onClick={handleAdd} disabled={isSaving}>
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Product"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -230,10 +281,10 @@ export function ProductsTable() {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="font-semibold">ID</TableHead>
-                <TableHead className="font-semibold">Client</TableHead>
-                <TableHead className="font-semibold">Product Name</TableHead>
-                <TableHead className="font-semibold">Start Date</TableHead>
-                <TableHead className="font-semibold">End Date</TableHead>
+                <TableHead className="font-semibold">Name</TableHead>
+                <TableHead className="font-semibold">Monthly Price</TableHead>
+                <TableHead className="font-semibold">Status</TableHead>
+                <TableHead className="font-semibold">Description</TableHead>
                 <TableHead className="w-[70px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -246,16 +297,23 @@ export function ProductsTable() {
                 </TableRow>
               ) : (
                 filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-mono text-sm">{product.id}</TableCell>
+                  <TableRow key={product.id_product}>
+                    <TableCell className="font-mono text-sm">{product.id_product}</TableCell>
+                    <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell className="font-mono">${parseFloat(product.monthly_price).toFixed(2)}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center rounded-md bg-secondary/20 px-2 py-1 text-xs font-medium text-secondary-foreground">
-                        {getClientName(product.id_client)}
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium",
+                          product.is_active
+                            ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                            : "bg-gray-500/10 text-gray-600 dark:text-gray-400"
+                        )}
+                      >
+                        {product.is_active ? "Active" : "Inactive"}
                       </span>
                     </TableCell>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(product.start_date)}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(product.end_date)}</TableCell>
+                    <TableCell className="max-w-md truncate text-muted-foreground">{product.description || "N/A"}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -270,8 +328,9 @@ export function ProductsTable() {
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDelete(product.id)}
+                            onClick={() => handleDelete(product.id_product)}
                             className="text-destructive focus:text-destructive"
+                            disabled={isSaving}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
@@ -287,7 +346,7 @@ export function ProductsTable() {
         </div>
       </div>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => { setIsEditDialogOpen(open); if (!open) resetForm(); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
@@ -295,55 +354,38 @@ export function ProductsTable() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-client">Client</Label>
-              <Select
-                value={formData.id_client}
-                onValueChange={(value) => setFormData({ ...formData, id_client: value })}
-              >
-                <SelectTrigger id="edit-client">
-                  <SelectValue placeholder="Select a client" />
+              <Label htmlFor="edit-name">Name</Label>
+              <Input id="edit-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} disabled={isSaving} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Input id="edit-description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} disabled={isSaving} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-price">Monthly Price ($)</Label>
+              <Input id="edit-price" type="number" step="0.01" value={formData.monthly_price} onChange={(e) => setFormData({ ...formData, monthly_price: e.target.value })} disabled={isSaving} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="is-active-edit">Status</Label>
+              <Select value={formData.is_active} onValueChange={(value) => setFormData({ ...formData, is_active: value })} disabled={isSaving}>
+                <SelectTrigger id="is-active-edit">
+                  <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockClients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="true">Active</SelectItem>
+                  <SelectItem value="false">Inactive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-name">Product Name</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-start-date">Start Date</Label>
-              <Input
-                id="edit-start-date"
-                type="date"
-                value={formData.start_date}
-                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-end-date">End Date</Label>
-              <Input
-                id="edit-end-date"
-                type="date"
-                value={formData.end_date}
-                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-              />
-            </div>
+            {formError && <p className="text-sm text-destructive">{formError}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleEdit}>Save Changes</Button>
+            <Button onClick={handleEdit} disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
