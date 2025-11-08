@@ -1,4 +1,3 @@
-# În routers/components.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -14,9 +13,6 @@ router = APIRouter(
 
 @router.get("/", response_model=List[ComponentOut])
 def get_all_components(db: Session = Depends(get_db)):
-    """
-    Obține o listă cu toate componentele.
-    """
     components = db.query(Component).all()
     return components
 
@@ -39,9 +35,6 @@ def update_component(
     component_data: ComponentUpdate,
     db: Session = Depends(get_db)
 ):
-    """
-    Actualizează o componentă.
-    """
     db_component = db.query(Component).filter(Component.id_component == component_id).first()
     if not db_component:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Component not found")
@@ -56,9 +49,6 @@ def update_component(
 
 @router.delete("/{component_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_component(component_id: int, db: Session = Depends(get_db)):
-    """
-    Șterge o componentă.
-    """
     db_component = db.query(Component).filter(Component.id_component == component_id).first()
     if not db_component:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Component not found")

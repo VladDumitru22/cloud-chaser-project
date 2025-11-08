@@ -4,5 +4,6 @@ from .users import router as user_router
 from .products import router as product_router
 from .subscriptions import router as subscription_router
 from .admin import router as admin_router
-from .components import router as components_router
+from .components_management import router as components_management_router
 from .products_management import router as products_management_router
+from .packages_management import router as packages_management_router

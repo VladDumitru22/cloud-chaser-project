@@ -12,4 +12,8 @@ from .products import (ProductCard, ProductDropDown,
 
 from .subscriptions import SubscriptionCreate, SubscriptionOut
 
-from .components import ComponentCreate, ComponentOut, ComponentUpdate
+from .components import (ComponentCreate, ComponentOut, 
+                         ComponentUpdate,)
+
+from .packages import (PackageCreate, PackageOut,
+                       PackageUpdate,)

@@ -5,8 +5,9 @@ from backend.routers import (
     product_router,
     subscription_router,
     admin_router,
-    components_router,
-    products_management_router
+    components_management_router,
+    products_management_router,
+    packages_management_router,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from backend.db.session import engine
@@ -32,5 +33,6 @@ app.include_router(campaign_router, prefix="/campaigns")
 app.include_router(product_router, prefix="/products")
 app.include_router(subscription_router, prefix="/subscriptions")
 app.include_router(admin_router, prefix="/admin")
-app.include_router(components_router, prefix="/components")
+app.include_router(components_management_router, prefix="/components-management")
 app.include_router(products_management_router, prefix="/products-management",)
+app.include_router(packages_management_router, prefix="/packages-management",)
