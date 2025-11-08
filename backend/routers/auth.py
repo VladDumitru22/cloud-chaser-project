@@ -8,7 +8,7 @@ from backend.core import ACCESS_TOKEN_EXPIRE_MINUTES, verify_password, create_ac
 from backend.functions import get_user_by_email, create_user
 from backend.schemas import Token, UserOut, UserCreate
 
-router = APIRouter(tags=["auth"])
+router = APIRouter(tags=["Auth"])
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def create_new_user(user: UserCreate, db: Session = Depends(get_db)):

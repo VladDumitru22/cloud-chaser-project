@@ -8,7 +8,7 @@ from backend.db.session import get_db
 from backend.core import operative_required
 
 router = APIRouter(
-    tags=["components"],
+    tags=["Components"],
     dependencies=[Depends(operative_required)]
 )
 

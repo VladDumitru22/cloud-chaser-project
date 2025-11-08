@@ -5,3 +5,4 @@ from .products import router as product_router
 from .subscriptions import router as subscription_router
 from .admin import router as admin_router
 from .components import router as components_router
+from .products_management import router as products_management_router

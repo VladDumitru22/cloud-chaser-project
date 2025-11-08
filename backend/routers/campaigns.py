@@ -6,7 +6,7 @@ from backend.functions import get_user_campaigns
 from backend.schemas import CampaignOut, CampaignCreate
 from backend.db.models import Campaign, Subscription, SubscriptionStatus, CampaignStatus
 
-router = APIRouter(tags=["campaigns"])
+router = APIRouter(tags=["Campaigns"])
 
 @router.get("/", response_model=list[CampaignOut])
 def get_campaigns_for_current_user(db: Session = Depends(get_db), current_user = Depends(get_current_user)):

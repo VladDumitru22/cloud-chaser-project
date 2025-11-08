@@ -7,7 +7,7 @@ from typing import List
 from backend.db.models import Product
 
 
-router = APIRouter(tags=["products"])
+router = APIRouter(tags=["Products"])
 
 @router.get("/drop_down", response_model=list[ProductDropDown])
 def get_products_for_drop_down(db: Session = Depends(get_db)):

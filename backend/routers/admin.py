@@ -7,7 +7,7 @@ from backend.db.session import get_db
 from backend.core import admin_required
 from typing import List
 
-router = APIRouter(tags=["admin"], dependencies=[Depends(admin_required)])
+router = APIRouter(tags=["Admin"], dependencies=[Depends(admin_required)])
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 @router.get("/clients", response_model=List[UserOut])

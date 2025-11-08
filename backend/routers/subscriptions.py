@@ -7,7 +7,7 @@ from backend.schemas import SubscriptionOut, SubscriptionCreate
 from datetime import date
 from typing import List
 
-router = APIRouter(tags=["subscriptions"])
+router = APIRouter(tags=["Subscriptions"])
 
 @router.post("/", response_model=SubscriptionOut)
 def create_subscription(
