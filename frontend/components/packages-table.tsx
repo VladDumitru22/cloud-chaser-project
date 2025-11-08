@@ -1,10 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
@@ -15,139 +14,223 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Card } from "@/components/ui/card"
-import { Plus, MoreVertical, Pencil, Trash2, Search } from "lucide-react"
+import { Plus, MoreVertical, Pencil, Trash2, Search, Loader2 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+type Package = {
+  id_product: number
+  id_component: number
+  quantity: number
+  product_name: string
+  component_name: string
+}
 
 type Product = {
-  id: string
+  id_product: number
   name: string
 }
 
 type Component = {
-  id: string
+  id_component: number
   name: string
 }
 
-type Package = {
-  id: string
-  id_product: string
-  id_component: string
-  quantity: number
-  notes: string
-}
-
-const mockProducts: Product[] = [
-  { id: "1", name: "Summer Campaign 2024" },
-  { id: "2", name: "Product Launch Strategy" },
-  { id: "3", name: "Brand Awareness Initiative" },
-]
-
-const mockComponents: Component[] = [
-  { id: "1", name: "Social Media Post Template" },
-  { id: "2", name: "Analytics Dashboard Widget" },
-  { id: "3", name: "Content Calendar Module" },
-]
-
-const initialPackages: Package[] = [
-  {
-    id: "1",
-    id_product: "1",
-    id_component: "1",
-    quantity: 50,
-    notes: "Standard template package for summer campaign",
-  },
-  {
-    id: "2",
-    id_product: "2",
-    id_component: "2",
-    quantity: 3,
-    notes: "Analytics widgets for launch tracking",
-  },
-  {
-    id: "3",
-    id_product: "3",
-    id_component: "3",
-    quantity: 1,
-    notes: "Annual content planning module",
-  },
-]
+const API_URL = "http://localhost:8000"
 
 export function PackagesTable() {
-  const [packages, setPackages] = useState<Package[]>(initialPackages)
+  const [packages, setPackages] = useState<Package[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [components, setComponents] = useState<Component[]>([])
+  
   const [searchQuery, setSearchQuery] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingPackage, setEditingPackage] = useState<Package | null>(null)
+  
+  const [editingKey, setEditingKey] = useState<{ id_product: number; id_component: number } | null>(null)
+  
   const [formData, setFormData] = useState({
     id_product: "",
     id_component: "",
     quantity: "",
-    notes: "",
   })
+  const [isSaving, setIsSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
-  const getProductName = (productId: string) => {
-    return mockProducts.find((p) => p.id === productId)?.name || "Unknown Product"
-  }
+  const getToken = () => localStorage.getItem("cloudchaser_token")
 
-  const getComponentName = (componentId: string) => {
-    return mockComponents.find((c) => c.id === componentId)?.name || "Unknown Component"
-  }
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true)
+      setError(null)
+      const token = getToken()
+      if (!token) {
+        setError("User not authenticated.")
+        setIsLoading(false)
+        return
+      }
+      const headers = { Authorization: `Bearer ${token}` }
+
+      try {
+        const [packagesRes, productsRes, componentsRes] = await Promise.all([
+          fetch(`${API_URL}/packages-management/`, { headers }),
+          fetch(`${API_URL}/products-management/`, { headers }),
+          fetch(`${API_URL}/components-management/`, { headers }),
+        ])
+
+        if (!packagesRes.ok) throw new Error("Failed to fetch packages")
+        if (!productsRes.ok) throw new Error("Failed to fetch products")
+        if (!componentsRes.ok) throw new Error("Failed to fetch components")
+
+        const packagesData: Package[] = await packagesRes.json()
+        const productsData: Product[] = await productsRes.json()
+        const componentsData: Component[] = await componentsRes.json()
+
+        setPackages(packagesData)
+        setProducts(productsData)
+        setComponents(componentsData)
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const filteredPackages = packages.filter(
     (pkg) =>
-      getProductName(pkg.id_product).toLowerCase().includes(searchQuery.toLowerCase()) ||
-      getComponentName(pkg.id_component).toLowerCase().includes(searchQuery.toLowerCase()) ||
-      pkg.notes.toLowerCase().includes(searchQuery.toLowerCase()),
+      pkg.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      pkg.component_name.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const handleAdd = () => {
-    const newPackage: Package = {
-      id: (packages.length + 1).toString(),
-      id_product: formData.id_product,
-      id_component: formData.id_component,
-      quantity: Number.parseInt(formData.quantity),
-      notes: formData.notes,
+  const resetForm = () => {
+    setFormData({ id_product: "", id_component: "", quantity: "" })
+    setFormError(null)
+    setIsSaving(false)
+  }
+
+  const handleAdd = async () => {
+    setIsSaving(true)
+    setFormError(null)
+    const token = getToken()
+
+    try {
+      const payload = {
+        id_product: parseInt(formData.id_product),
+        id_component: parseInt(formData.id_component),
+        quantity: parseInt(formData.quantity),
+      }
+      
+      const res = await fetch(`${API_URL}/packages-management/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.detail || "Failed to add package link")
+      }
+
+      const newPackage: Package = await res.json()
+      setPackages([...packages, newPackage])
+      resetForm()
+      setIsAddDialogOpen(false)
+    } catch (err: any) {
+      setFormError(err.message)
+    } finally {
+      setIsSaving(false)
     }
-    setPackages([...packages, newPackage])
-    setFormData({ id_product: "", id_component: "", quantity: "", notes: "" })
-    setIsAddDialogOpen(false)
   }
 
-  const handleEdit = () => {
-    if (!editingPackage) return
-    setPackages(
-      packages.map((p) =>
-        p.id === editingPackage.id
-          ? {
-              ...p,
-              id_product: formData.id_product,
-              id_component: formData.id_component,
-              quantity: Number.parseInt(formData.quantity),
-              notes: formData.notes,
-            }
-          : p,
-      ),
-    )
-    setFormData({ id_product: "", id_component: "", quantity: "", notes: "" })
-    setEditingPackage(null)
-    setIsEditDialogOpen(false)
+  const handleEdit = async () => {
+    if (!editingKey) return
+    setIsSaving(true)
+    setFormError(null)
+    const token = getToken()
+
+    try {
+      const payload = {
+        quantity: parseInt(formData.quantity),
+      }
+      
+      const res = await fetch(`${API_URL}/packages-management/${editingKey.id_product}/${editingKey.id_component}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.detail || "Failed to update package link")
+      }
+
+      const updatedPackage: Package = await res.json()
+      setPackages(
+        packages.map((p) =>
+          p.id_product === updatedPackage.id_product && p.id_component === updatedPackage.id_component
+            ? updatedPackage
+            : p,
+        ),
+      )
+      resetForm()
+      setEditingKey(null)
+      setIsEditDialogOpen(false)
+    } catch (err: any) {
+      setFormError(err.message)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const handleDelete = (id: string) => {
-    setPackages(packages.filter((p) => p.id !== id))
+  const handleDelete = async (id_product: number, id_component: number) => {
+    setIsSaving(true)
+    setError(null)
+    const token = getToken()
+
+    try {
+      const res = await fetch(`${API_URL}/packages-management/${id_product}/${id_component}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.detail || "Failed to delete package link")
+      }
+      
+      setPackages(
+        packages.filter((p) => !(p.id_product === id_product && p.id_component === id_component)),
+      )
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const openEditDialog = (pkg: Package) => {
-    setEditingPackage(pkg)
+    setEditingKey({ id_product: pkg.id_product, id_component: pkg.id_component })
     setFormData({
-      id_product: pkg.id_product,
-      id_component: pkg.id_component,
+      id_product: pkg.id_product.toString(),
+      id_component: pkg.id_component.toString(),
       quantity: pkg.quantity.toString(),
-      notes: pkg.notes,
     })
+    setFormError(null)
     setIsEditDialogOpen(true)
+  }
+  
+  if (isLoading) {
+    return <div className="flex h-60 w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+  }
+  
+  if (error && !isLoading) {
+    return <div className="text-destructive p-4 text-center rounded-lg border border-destructive/50 bg-destructive/10">{error}</div>
   }
 
   return (
@@ -164,31 +247,28 @@ export function PackagesTable() {
             />
           </div>
 
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={(open) => { setIsAddDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="gap-2 shadow-md shadow-primary/20">
                 <Plus className="h-4 w-4" />
-                Add Package
+                Add Package Link
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Package</DialogTitle>
-                <DialogDescription>Create a new package linking products and components</DialogDescription>
+                <DialogTitle>Link Component to Product</DialogTitle>
+                <DialogDescription>Define the quantity of a component within a product</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="product">Product</Label>
-                  <Select
-                    value={formData.id_product}
-                    onValueChange={(value) => setFormData({ ...formData, id_product: value })}
-                  >
-                    <SelectTrigger id="product">
+                  <Label htmlFor="add-product">Product</Label>
+                  <Select value={formData.id_product} onValueChange={(value) => setFormData({ ...formData, id_product: value })} disabled={isSaving}>
+                    <SelectTrigger id="add-product">
                       <SelectValue placeholder="Select a product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockProducts.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
+                      {products.map((product) => (
+                        <SelectItem key={product.id_product} value={product.id_product.toString()}>
                           {product.name}
                         </SelectItem>
                       ))}
@@ -196,17 +276,14 @@ export function PackagesTable() {
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="component">Component</Label>
-                  <Select
-                    value={formData.id_component}
-                    onValueChange={(value) => setFormData({ ...formData, id_component: value })}
-                  >
-                    <SelectTrigger id="component">
+                  <Label htmlFor="add-component">Component</Label>
+                  <Select value={formData.id_component} onValueChange={(value) => setFormData({ ...formData, id_component: value })} disabled={isSaving}>
+                    <SelectTrigger id="add-component">
                       <SelectValue placeholder="Select a component" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockComponents.map((component) => (
-                        <SelectItem key={component.id} value={component.id}>
+                      {components.map((component) => (
+                        <SelectItem key={component.id_component} value={component.id_component.toString()}>
                           {component.name}
                         </SelectItem>
                       ))}
@@ -214,31 +291,18 @@ export function PackagesTable() {
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                    placeholder="0"
-                  />
+                  <Label htmlFor="add-quantity">Quantity</Label>
+                  <Input id="add-quantity" type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} placeholder="0" disabled={isSaving} />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Additional notes about this package"
-                    rows={3}
-                  />
-                </div>
+                {formError && <p className="text-sm text-destructive">{formError}</p>}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSaving}>
                   Cancel
                 </Button>
-                <Button onClick={handleAdd}>Add Package</Button>
+                <Button onClick={handleAdd} disabled={isSaving}>
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Link"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -248,37 +312,25 @@ export function PackagesTable() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="font-semibold">ID</TableHead>
                 <TableHead className="font-semibold">Product</TableHead>
                 <TableHead className="font-semibold">Component</TableHead>
                 <TableHead className="font-semibold">Quantity</TableHead>
-                <TableHead className="font-semibold">Notes</TableHead>
                 <TableHead className="w-[70px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPackages.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                     No packages found
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredPackages.map((pkg) => (
-                  <TableRow key={pkg.id}>
-                    <TableCell className="font-mono text-sm">{pkg.id}</TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center rounded-md bg-secondary/20 px-2 py-1 text-xs font-medium text-secondary-foreground">
-                        {getProductName(pkg.id_product)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                        {getComponentName(pkg.id_component)}
-                      </span>
-                    </TableCell>
+                  <TableRow key={`${pkg.id_product}-${pkg.id_component}`}>
+                    <TableCell className="font-medium">{pkg.product_name}</TableCell>
+                    <TableCell className="text-muted-foreground">{pkg.component_name}</TableCell>
                     <TableCell className="font-mono">{pkg.quantity}</TableCell>
-                    <TableCell className="max-w-md truncate text-muted-foreground">{pkg.notes}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -290,11 +342,12 @@ export function PackagesTable() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openEditDialog(pkg)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            Edit
+                            Edit Quantity
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDelete(pkg.id)}
+                            onClick={() => handleDelete(pkg.id_product, pkg.id_component)}
                             className="text-destructive focus:text-destructive"
+                            disabled={isSaving}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
@@ -310,73 +363,34 @@ export function PackagesTable() {
         </div>
       </div>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => { setIsEditDialogOpen(open); if (!open) resetForm(); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Package</DialogTitle>
-            <DialogDescription>Update the package details</DialogDescription>
+            <DialogTitle>Edit Package Quantity</DialogTitle>
+            <DialogDescription>Update the quantity for this product-component link</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="edit-product">Product</Label>
-              <Select
-                value={formData.id_product}
-                onValueChange={(value) => setFormData({ ...formData, id_product: value })}
-              >
-                <SelectTrigger id="edit-product">
-                  <SelectValue placeholder="Select a product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockProducts.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input id="edit-product" value={products.find(p => p.id_product.toString() === formData.id_product)?.name || '...'} disabled />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-component">Component</Label>
-              <Select
-                value={formData.id_component}
-                onValueChange={(value) => setFormData({ ...formData, id_component: value })}
-              >
-                <SelectTrigger id="edit-component">
-                  <SelectValue placeholder="Select a component" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockComponents.map((component) => (
-                    <SelectItem key={component.id} value={component.id}>
-                      {component.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input id="edit-component" value={components.find(c => c.id_component.toString() === formData.id_component)?.name || '...'} disabled />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-quantity">Quantity</Label>
-              <Input
-                id="edit-quantity"
-                type="number"
-                value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-              />
+              <Input id="edit-quantity" type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} disabled={isSaving} />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-notes">Notes</Label>
-              <Textarea
-                id="edit-notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={3}
-              />
-            </div>
+            {formError && <p className="text-sm text-destructive">{formError}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleEdit}>Save Changes</Button>
+            <Button onClick={handleEdit} disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -61,7 +61,7 @@ export function ComponentsTable() {
       }
 
       try {
-        const res = await fetch(`${API_URL}/components/`, {
+        const res = await fetch(`${API_URL}/components-management/`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) {
@@ -103,7 +103,7 @@ export function ComponentsTable() {
         unit_cost: parseFloat(formData.unit_cost),
       }
       
-      const res = await fetch(`${API_URL}/components/`, {
+      const res = await fetch(`${API_URL}/components-management/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -137,7 +137,7 @@ export function ComponentsTable() {
         unit_cost: parseFloat(formData.unit_cost),
       }
       
-      const res = await fetch(`${API_URL}/components/${editingComponent.id_component}`, {
+      const res = await fetch(`${API_URL}/components-management/${editingComponent.id_component}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -168,7 +168,7 @@ export function ComponentsTable() {
     const token = getToken()
 
     try {
-      const res = await fetch(`${API_URL}/components/${id}`, {
+      const res = await fetch(`${API_URL}/components-management/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       })

@@ -98,7 +98,8 @@ export default function LoginPage() {
               <p className="font-semibold mb-1">Demo Accounts:</p>
               <p>Operator: operator@cloudchaser.com / Operator123@</p>
               <p>Admin: admin@cloudchaser.com / Admin123@</p>
-              <p>Client: client@cloudchaser.com / Test123@</p>
+              <p>Client1: client1@cloudchaser.com / Test123@</p>
+              <p>Client2: client2@cloudchaser.com / Client123@</p>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
